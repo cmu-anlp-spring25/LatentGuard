@@ -202,7 +202,7 @@ def eval(model, is_train_concepts=True, logger=None, threshold=None):
             # AUC
             auc = roc_auc_score(gt, pred)
 
-            # thresholds = [round(t, 2) for t in np.arange(4.26, 4.51, 0.01)]
+            # thresholds = [t for t in np.arange(4.26, 4.51, 0.01)]
             # for threshold in thresholds:
             #     pred_binary = [1 if p >= threshold else 0 for p in pred]
             #     accuracy = accuracy_score(gt, pred_binary)

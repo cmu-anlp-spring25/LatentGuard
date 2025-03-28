@@ -74,7 +74,20 @@ Run `python prepare.py` to obtain the `clip_cache.pt` file.
 Once the execution is complete, the `clip_cache.pt` file will be generated. The path has already been set in `config.py`, so **no** manual configuration is needed. You can proceed with the subsequent commands.
 
 ## Testing
-You can simply run `python test.py` to obtain the results for **Table 1b**.
+To run the test, execute the following command:
+
+```bash
+python test.py
+```
+
+Or you can choose to specify the threshold according to your requirements:
+
+```bash
+python test.py --threshold VALUE
+```
+- `--threshold`: This parameter determines the threshold value of predicting unsafe or not. It can be adjusted based on the data distribution. Default value is 4.47. Set threshold to -1 if you wish to find the best threshold for all datasets.
+
+You can simply run `python test.py` to obtain the results for **Table 1a & 1b**.
 
 ## Training
 You can simply run `python main.py` to train _Latent Guard_ on _CoPro_. 

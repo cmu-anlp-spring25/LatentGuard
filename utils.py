@@ -14,7 +14,8 @@ from transformers import CLIPTokenizer
 import configs
 import time
 import json
-from sklearn.metrics import roc_auc_score
+from sklearn.metrics import roc_auc_score, accuracy_score
+import numpy as np
 
 clip_cache = configs.clip_cache
 
@@ -169,20 +170,54 @@ def eval_by_dict_info(
     return selected_items, pred_list
 
 
-def eval(model, is_train_concepts=True, logger=None):
+def eval(model, is_train_concepts=True, logger=None, threshold=None):
     model.eval()
     def l2_normalize(tensor, axis=1):
         return F.normalize(tensor, p=2, dim=axis)
     eval_func = eval_by_dict_info
     with torch.no_grad():
-        def cal_auc(replace_dict, num = 1000):
-            _, pred_harm  = eval_func(is_train_concepts = is_train_concepts,  is_unsafe= True,   num = num, replace_dict=replace_dict, logger=logger, model=model)
-            _, pred_safe  = eval_func(is_train_concepts = is_train_concepts,  is_unsafe= False,  num = num, replace_dict=replace_dict, logger=logger, model=model)
+        def find_best_threshold(pred_scores, ground_truth):
+          best_thresh = None
+          best_acc = 0.0
+
+          thresholds = np.linspace(min(pred_scores), max(pred_scores), num=200)
+
+          for t in thresholds:
+              pred_binary = [1 if s >= t else 0 for s in pred_scores]
+              acc = accuracy_score(ground_truth, pred_binary)
+              if acc > best_acc:
+                  best_acc = acc
+                  best_thresh = t
+
+          return best_thresh, best_acc
+        
+        def cal_auc(replace_dict, num=1000, threshold=threshold):
+            _, pred_harm = eval_func(is_train_concepts=is_train_concepts, is_unsafe=True, num=num, replace_dict=replace_dict, logger=logger, model=model)
+            _, pred_safe = eval_func(is_train_concepts=is_train_concepts, is_unsafe=False, num=num, replace_dict=replace_dict, logger=logger, model=model)
+
             pred = pred_harm + pred_safe
-            gt = [1 for it in range(len(pred_harm))] + [0 for it in range(len(pred_safe))]
-            # calculate the AUC
-            res = roc_auc_score(gt, pred)
-            logger.info(f'AUC {res}')
+
+            gt = [1] * len(pred_harm) + [0] * len(pred_safe)
+
+            # AUC
+            auc = roc_auc_score(gt, pred)
+
+            # thresholds = [round(t, 2) for t in np.arange(4.26, 4.51, 0.01)]
+            # for threshold in thresholds:
+            #     pred_binary = [1 if p >= threshold else 0 for p in pred]
+            #     accuracy = accuracy_score(gt, pred_binary)
+            #     logger.info(f"Threshold: {threshold} with accuracy: {accuracy}")
+
+            # Accuracy
+            if threshold == 'best':
+                threshold, accuracy = find_best_threshold(pred, gt)
+            else:
+                threshold = threshold
+                pred_binary = [1 if p >= threshold else 0 for p in pred]
+                accuracy = accuracy_score(gt, pred_binary)
+
+            logger.info(f"AUC: {auc}")
+            logger.info(f"Threshold: {threshold} with accuracy: {accuracy}")
 
         logger.info(f'[eval] Eval on explicit cases')
         cal_auc(None)

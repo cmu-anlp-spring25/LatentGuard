@@ -11,8 +11,12 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 import time
 from sklearn.metrics import roc_auc_score
 import sys
-
+import argparse
 from utils import *
+
+parser = argparse.ArgumentParser(description="Parameters of inference LatentGuard model")
+parser.add_argument('--threshold', type=float, default=4.47, help="Threshold value")
+args = parser.parse_args()
 
 # prepare logger
 cur_time = get_timestamp()
@@ -50,6 +54,6 @@ eval_loader  = DataLoader(eval_dataset, batch_size=32, shuffle=False)
 wrapClip = WrapClip(device=device, model_name = 'openai/clip-vit-large-patch14')
 
 is_train_concepts=True
-eval(model, is_train_concepts, logger)
+eval(model, is_train_concepts, logger, threshold=args.threshold)
 is_train_concepts=False
-eval(model, is_train_concepts, logger)
+eval(model, is_train_concepts, logger, threshold=args.threshold)

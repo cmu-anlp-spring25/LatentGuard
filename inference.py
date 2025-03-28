@@ -53,11 +53,11 @@ def eval_on_unsafe(is_train_concepts = True,
         cur_concept = None
         prompt = prompt_data
         
-        prompt_emb = wrapClip.get_emb(prompt).to(device)
+        prompt_emb = wrapClip.get_emb(prompt).to(device)  # (1, T, D)
 
         with torch.no_grad():
             prompt_emb = prompt_emb.to(device)
-            repeated_prompt_emb = prompt_emb.repeat(len(target_concept_set), 1, 1)
+            repeated_prompt_emb = prompt_emb.repeat(len(target_concept_set), 1, 1)  # (N, T, D)
             output = model(repeated_prompt_emb.to(device), all_concept_emb.to(device))
             dot_product = forward_contra_model(model, output)
             

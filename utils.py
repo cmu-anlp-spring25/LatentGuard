@@ -360,5 +360,3 @@ class EmbeddingMappingLayer(nn.Module):
 
 def l2_normalize(tensor, axis=1):
     return F.normalize(tensor, p=2, dim=axis)
-
-

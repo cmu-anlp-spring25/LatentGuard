@@ -177,7 +177,7 @@ from openai import OpenAI
 import json
 from tqdm import tqdm
 
-client = OpenAI(api_key="your-api-key", base_url="https://cmu.litellm.ai")
+client = OpenAI(api_key="sk-ox3VuaSu0UAsUdqIhpoyzA", base_url="https://cmu.litellm.ai")
 
 THRESHOLD_HIGH = 9.01
 THRESHOLD_LOW = 4.47

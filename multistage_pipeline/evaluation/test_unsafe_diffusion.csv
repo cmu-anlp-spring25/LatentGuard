@@ -1,0 +1,2 @@
+auroc,acc,acc_pre_latentguard,acc_postlatentguard_delta_0.1,acc_postlatentguard_delta_0.5,acc_postlatentguard_delta_1,acc_postlatentguard_delta_2,acc_postlatentguard_delta_3,acc_postlatentguard_delta_4,acc_postlatentguard_delta_5
+0.867304068522484,0.7231520223152023,0.7161785216178521,0.7294281729428173,0.7377963737796374,0.7510460251046025,0.7873082287308228,0.8193863319386332,0.8110181311018131,0.8019525801952581

@@ -4,8 +4,7 @@ import torch.optim as optim
 from sklearn.metrics import f1_score
 from torch.utils.data import Dataset, DataLoader, Subset
 from torch.utils.data import random_split
-from sklearn.metrics import confusion_matrix, f1_score, precision_recall_fscore_support
-import random
+from sklearn.metrics import confusion_matrix, f1_score, precision_recall_fscore_support, accuracy_score, precision_score, recall_score
 import torch.nn.functional as F
 import os
 import shutil
@@ -14,8 +13,8 @@ from transformers import CLIPTokenizer
 import configs
 import time
 import json
-from sklearn.metrics import roc_auc_score, accuracy_score
-import numpy as np
+from sklearn.metrics import roc_auc_score
+import pandas as pd
 
 clip_cache = configs.clip_cache
 
@@ -63,7 +62,7 @@ def forward_contra_model(model, model_output):
     return dot_product
 
 # json read dataset
-def prepare_dataset():
+def prepare_dataset(mode='test'):
     import json
     dataset_json = json.load(open(configs.dataset_file, 'r'))
     train_concepts = dataset_json['ID_concepts']
@@ -73,19 +72,21 @@ def prepare_dataset():
         [entry['unsafe_prompt'], entry['safe_prompt'], entry['concept']]
         for entry in train_raw_data_list
     ]
-    valid_raw_data_list = dataset_json['ID_test_data']
+    valid_raw_data_list = dataset_json[f'ID_{mode}_data']
     valid_raw_data_list = [
         [entry['unsafe_prompt'], entry['safe_prompt'], entry['concept']]
         for entry in valid_raw_data_list
     ]
-    test_raw_data_list = dataset_json['OOD_test_data']
+    test_raw_data_list = dataset_json[f'OOD_{mode}_data']
     test_raw_data_list = [
         [entry['unsafe_prompt'], entry['safe_prompt'], entry['concept']]
         for entry in test_raw_data_list
     ]
     return dataset_json, train_concepts, test_concepts, train_raw_data_list, valid_raw_data_list, test_raw_data_list
 
-dataset_json, train_concepts, test_concepts, train_raw_data_list, valid_raw_data_list, test_raw_data_list = prepare_dataset()
+mode = 'test'
+dataset_json, train_concepts, test_concepts, train_raw_data_list, valid_raw_data_list, test_raw_data_list = prepare_dataset(mode=mode)
+print('evaluate mode:', mode)
 
 # Output the results
 # print("Training Concepts:", len(train_concepts))
@@ -138,6 +139,7 @@ def eval_by_dict_info(
 
     logger.info(f'Number of to be evaluated prompts: {len(selected_items)}')
     for _i, prompt_data in enumerate(selected_items):
+    # for _i, prompt_data in enumerate(selected_items[:5]): #for quick debugging
         if _i%2000==0:
             logger.info(f'process {_i}')
         cur_concept = prompt_data[2]
@@ -170,61 +172,68 @@ def eval_by_dict_info(
     return selected_items, pred_list
 
 
-def eval(model, is_train_concepts=True, logger=None, threshold=None):
+def eval(model, is_train_concepts=True, logger=None, save_prediction=True, mode='test'):
     model.eval()
     def l2_normalize(tensor, axis=1):
         return F.normalize(tensor, p=2, dim=axis)
     eval_func = eval_by_dict_info
     with torch.no_grad():
-        def find_best_threshold(pred_scores, ground_truth):
-          best_thresh = None
-          best_acc = 0.0
-
-          thresholds = np.linspace(min(pred_scores), max(pred_scores), num=200)
-
-          for t in thresholds:
-              pred_binary = [1 if s >= t else 0 for s in pred_scores]
-              acc = accuracy_score(ground_truth, pred_binary)
-              if acc > best_acc:
-                  best_acc = acc
-                  best_thresh = t
-
-          return best_thresh, best_acc
-        
-        def cal_auc(replace_dict, num=1000, threshold=threshold):
-            _, pred_harm = eval_func(is_train_concepts=is_train_concepts, is_unsafe=True, num=num, replace_dict=replace_dict, logger=logger, model=model)
-            _, pred_safe = eval_func(is_train_concepts=is_train_concepts, is_unsafe=False, num=num, replace_dict=replace_dict, logger=logger, model=model)
-
+        def cal_eval_scores(replace_dict, num = 1000):
+            selected_items_harm, pred_harm  = eval_func(is_train_concepts = is_train_concepts,  is_unsafe= True,   num = num, replace_dict=replace_dict, logger=logger, model=model)
+            selected_items_safe, pred_safe  = eval_func(is_train_concepts = is_train_concepts,  is_unsafe= False,  num = num, replace_dict=replace_dict, logger=logger, model=model)
             pred = pred_harm + pred_safe
+            gt = [1 for it in range(len(pred_harm))] + [0 for it in range(len(pred_safe))]
+            # calculate the AUC
+            roc_auc = roc_auc_score(gt, pred)
 
-            gt = [1] * len(pred_harm) + [0] * len(pred_safe)
+            logger.info(f'AUC {roc_auc}')
 
-            # AUC
-            auc = roc_auc_score(gt, pred)
+            metrics = {
+                'roc_auc': roc_auc
+            }
 
-            # thresholds = [t for t in np.arange(4.26, 4.51, 0.01)]
-            # for threshold in thresholds:
-            #     pred_binary = [1 if p >= threshold else 0 for p in pred]
-            #     accuracy = accuracy_score(gt, pred_binary)
-            #     logger.info(f"Threshold: {threshold} with accuracy: {accuracy}")
+            return metrics, selected_items_harm + selected_items_safe, pred, gt
 
-            # Accuracy
-            if threshold == 'best':
-                threshold, accuracy = find_best_threshold(pred, gt)
-            else:
-                threshold = threshold
-                pred_binary = [1 if p >= threshold else 0 for p in pred]
-                accuracy = accuracy_score(gt, pred_binary)
-
-            logger.info(f"AUC: {auc}")
-            logger.info(f"Threshold: {threshold} with accuracy: {accuracy}")
+        prediction_root_dir = './predictions'
 
         logger.info(f'[eval] Eval on explicit cases')
-        cal_auc(None)
+        metrics, selected_items, pred, target = cal_eval_scores(None)
+        if save_prediction:
+            prediction_explicit_path = os.path.join(prediction_root_dir, mode, f'is_train_concepts_{is_train_concepts}', 'explicit.csv')
+            prediction_dir = os.path.dirname(prediction_explicit_path)
+            if not os.path.exists(prediction_dir):
+                os.makedirs(prediction_dir)
+            results_df = pd.DataFrame()
+            results_df['unsafe_prompt'] = [item[0] for item in selected_items]
+            results_df['safe_prompt'] = [item[1] for item in selected_items]
+            results_df['concept'] = [item[2] for item in selected_items]
+            results_df['prediction'] = pred
+            results_df['target'] = target
+            results_df.to_csv(prediction_explicit_path, index=False)
+
         logger.info(f'[eval] Eval on synonyms cases')
-        cal_auc(synonyms_dict)
+        metrics, selected_items, pred, target = cal_eval_scores(synonyms_dict)
+        if save_prediction:
+            prediction_synonym_path = os.path.join(prediction_root_dir, mode, f'is_train_concepts_{is_train_concepts}', 'synonym.csv')
+            results_df = pd.DataFrame()
+            results_df['unsafe_prompt'] = [item[0] for item in selected_items]
+            results_df['safe_prompt'] = [item[1] for item in selected_items]
+            results_df['concept'] = [item[2] for item in selected_items]
+            results_df['prediction'] = pred
+            results_df['target'] = target
+            results_df.to_csv(prediction_synonym_path, index=False)
+
         logger.info(f'[eval] Eval on adversarial cases')
-        cal_auc(dict_concept_adv)
+        metrics, selected_items, pred, target = cal_eval_scores(dict_concept_adv)
+        if save_prediction:
+            prediction_adversarial_path = os.path.join(prediction_root_dir, mode, f'is_train_concepts_{is_train_concepts}', 'adversarial.csv')
+            results_df = pd.DataFrame()
+            results_df['unsafe_prompt'] = [item[0] for item in selected_items]
+            results_df['safe_prompt'] = [item[1] for item in selected_items]
+            results_df['concept'] = [item[2] for item in selected_items]
+            results_df['prediction'] = pred
+            results_df['target'] = target
+            results_df.to_csv(prediction_adversarial_path, index=False)
 
 class OnlineDataset(Dataset):
     def __init__(self, data_list, emb_func, clip_cache, device):

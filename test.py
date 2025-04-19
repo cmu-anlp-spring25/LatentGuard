@@ -16,6 +16,7 @@ from utils import *
 
 parser = argparse.ArgumentParser(description="Parameters of inference LatentGuard model")
 parser.add_argument('--threshold', type=float, default=4.47, help="Threshold value")
+parser.add_argument('--mode', type=str, default='test', help="Evaluate test or valid set")
 args = parser.parse_args()
 
 # prepare logger
@@ -54,6 +55,6 @@ eval_loader  = DataLoader(eval_dataset, batch_size=32, shuffle=False)
 wrapClip = WrapClip(device=device, model_name = 'openai/clip-vit-large-patch14')
 
 is_train_concepts=True
-eval(model, is_train_concepts, logger, threshold=args.threshold)
+eval(model, is_train_concepts, logger, mode=args.mode)
 is_train_concepts=False
-eval(model, is_train_concepts, logger, threshold=args.threshold)
+eval(model, is_train_concepts, logger, mode=args.mode)

@@ -136,98 +136,98 @@ def get_metrics(df, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):
 
 def main():
 
-    # print('Processing CoPro dataset...')
-    # valid_id_explicit_df = pd.read_csv('predictions/valid/is_train_concepts_True/explicit.csv')
-    # valid_id_synonym_df = pd.read_csv('predictions/valid/is_train_concepts_True/synonym.csv')
-    # valid_id_adversarial_df = pd.read_csv('predictions/valid/is_train_concepts_True/adversarial.csv')
+    print('Processing CoPro dataset...')
+    valid_id_explicit_df = pd.read_csv('predictions/valid/is_train_concepts_True/explicit.csv')
+    valid_id_synonym_df = pd.read_csv('predictions/valid/is_train_concepts_True/synonym.csv')
+    valid_id_adversarial_df = pd.read_csv('predictions/valid/is_train_concepts_True/adversarial.csv')
 
-    # valid_ood_explicit_df = pd.read_csv('predictions/valid/is_train_concepts_False/explicit.csv')
-    # valid_ood_synonym_df = pd.read_csv('predictions/valid/is_train_concepts_False/synonym.csv')
-    # valid_ood_adversarial_df = pd.read_csv('predictions/valid/is_train_concepts_False/adversarial.csv')
+    valid_ood_explicit_df = pd.read_csv('predictions/valid/is_train_concepts_False/explicit.csv')
+    valid_ood_synonym_df = pd.read_csv('predictions/valid/is_train_concepts_False/synonym.csv')
+    valid_ood_adversarial_df = pd.read_csv('predictions/valid/is_train_concepts_False/adversarial.csv')
 
-    # test_id_explicit_df = pd.read_csv('predictions/test/is_train_concepts_True/explicit.csv')
-    # test_id_synonym_df = pd.read_csv('predictions/test/is_train_concepts_True/synonym.csv')
-    # test_id_adversarial_df = pd.read_csv('predictions/test/is_train_concepts_True/adversarial.csv')
+    test_id_explicit_df = pd.read_csv('predictions/test/is_train_concepts_True/explicit.csv')
+    test_id_synonym_df = pd.read_csv('predictions/test/is_train_concepts_True/synonym.csv')
+    test_id_adversarial_df = pd.read_csv('predictions/test/is_train_concepts_True/adversarial.csv')
 
-    # test_ood_explicit_df = pd.read_csv('predictions/test/is_train_concepts_False/explicit.csv')
-    # test_ood_synonym_df = pd.read_csv('predictions/test/is_train_concepts_False/synonym.csv')
-    # test_ood_adversarial_df = pd.read_csv('predictions/test/is_train_concepts_False/adversarial.csv')
+    test_ood_explicit_df = pd.read_csv('predictions/test/is_train_concepts_False/explicit.csv')
+    test_ood_synonym_df = pd.read_csv('predictions/test/is_train_concepts_False/synonym.csv')
+    test_ood_adversarial_df = pd.read_csv('predictions/test/is_train_concepts_False/adversarial.csv')
 
-    # valid_dfs = {
-    #     'id_explicit': valid_id_explicit_df,
-    #     'id_synonym': valid_id_synonym_df,
-    #     'id_adversarial': valid_id_adversarial_df,
-    #     'ood_explicit': valid_ood_explicit_df,
-    #     'ood_synonym': valid_ood_synonym_df,
-    #     'ood_adversarial': valid_ood_adversarial_df
-    # }
+    valid_dfs = {
+        'id_explicit': valid_id_explicit_df,
+        'id_synonym': valid_id_synonym_df,
+        'id_adversarial': valid_id_adversarial_df,
+        'ood_explicit': valid_ood_explicit_df,
+        'ood_synonym': valid_ood_synonym_df,
+        'ood_adversarial': valid_ood_adversarial_df
+    }
 
-    # test_dfs = {
-    #     'id_explicit': test_id_explicit_df,
-    #     'id_synonym': test_id_synonym_df,
-    #     'id_adversarial': test_id_adversarial_df,
-    #     'ood_explicit': test_ood_explicit_df,
-    #     'ood_synonym': test_ood_synonym_df,
-    #     'ood_adversarial': test_ood_adversarial_df
-    # }
-    # # Validation set
-    # valid_metrics = list()
+    test_dfs = {
+        'id_explicit': test_id_explicit_df,
+        'id_synonym': test_id_synonym_df,
+        'id_adversarial': test_id_adversarial_df,
+        'ood_explicit': test_ood_explicit_df,
+        'ood_synonym': test_ood_synonym_df,
+        'ood_adversarial': test_ood_adversarial_df
+    }
+    # Validation set
+    valid_metrics = list()
 
-    # for setting in valid_dfs.keys():
-    #     df = valid_dfs[setting]
-    #     llm_classification_cache_path = f'multistage_pipeline/valid/{setting}.csv'
+    for setting in valid_dfs.keys():
+        df = valid_dfs[setting]
+        llm_classification_cache_path = f'multistage_pipeline/valid/{setting}.csv'
 
-    #     result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
-    #     #    print(result_df)
+        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
+        #    print(result_df)
 
-    #     result_path = f'multistage_pipeline/predictions/valid/{setting}.csv'
-    #     result_dir = os.path.dirname(result_path)
-    #     if not os.path.exists(result_dir):
-    #         os.makedirs(result_dir)
-    #     result_df.to_csv(result_path, index=False)
+        result_path = f'multistage_pipeline/predictions/valid/{setting}.csv'
+        result_dir = os.path.dirname(result_path)
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
+        result_df.to_csv(result_path, index=False)
         
-    #     metrics = get_metrics(result_df)
-    #     metrics['setting'] = setting
-    #     valid_metrics.append(metrics)
+        metrics = get_metrics(result_df)
+        metrics['setting'] = setting
+        valid_metrics.append(metrics)
 
-    #     valid_metrics_df = pd.DataFrame(valid_metrics)
-    #     valid_metrics_df = valid_metrics_df[['setting']+[col for col in valid_metrics_df.columns if col != 'setting']]
+        valid_metrics_df = pd.DataFrame(valid_metrics)
+        valid_metrics_df = valid_metrics_df[['setting']+[col for col in valid_metrics_df.columns if col != 'setting']]
 
-    #     metrics_path = 'multistage_pipeline/evaluation/valid.csv'
-    #     metrics_dir = os.path.dirname(metrics_path)
-    #     if not os.path.exists(metrics_dir):
-    #         os.makedirs(metrics_dir)
-    #     valid_metrics_df.to_csv(metrics_path, index=False)
+        metrics_path = 'multistage_pipeline/evaluation/valid.csv'
+        metrics_dir = os.path.dirname(metrics_path)
+        if not os.path.exists(metrics_dir):
+            os.makedirs(metrics_dir)
+        valid_metrics_df.to_csv(metrics_path, index=False)
 
 
-    # # Test set
-    # test_metrics = list()
+    # Test set
+    test_metrics = list()
 
-    # for setting in test_dfs.keys():
-    #     df = test_dfs[setting]
-    #     llm_classification_cache_path = f'multistage_pipeline/test/{setting}.csv'
+    for setting in test_dfs.keys():
+        df = test_dfs[setting]
+        llm_classification_cache_path = f'multistage_pipeline/test/{setting}.csv'
 
-    #     result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
-    #     #    print(result_df)
+        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
+        #    print(result_df)
 
-    #     result_path = f'multistage_pipeline/predictions/test/{setting}.csv'
-    #     result_dir = os.path.dirname(result_path)
-    #     if not os.path.exists(result_dir):
-    #         os.makedirs(result_dir)
-    #     result_df.to_csv(result_path, index=False)
+        result_path = f'multistage_pipeline/predictions/test/{setting}.csv'
+        result_dir = os.path.dirname(result_path)
+        if not os.path.exists(result_dir):
+            os.makedirs(result_dir)
+        result_df.to_csv(result_path, index=False)
         
-    #     metrics = get_metrics(result_df)
-    #     metrics['setting'] = setting
-    #     test_metrics.append(metrics)
+        metrics = get_metrics(result_df)
+        metrics['setting'] = setting
+        test_metrics.append(metrics)
 
-    #     test_metrics_df = pd.DataFrame(test_metrics)
-    #     test_metrics_df = test_metrics_df[['setting']+[col for col in test_metrics_df.columns if col != 'setting']]
+        test_metrics_df = pd.DataFrame(test_metrics)
+        test_metrics_df = test_metrics_df[['setting']+[col for col in test_metrics_df.columns if col != 'setting']]
 
-    #     metrics_path = 'multistage_pipeline/evaluation/test.csv'
-    #     metrics_dir = os.path.dirname(metrics_path)
-    #     if not os.path.exists(metrics_dir):
-    #         os.makedirs(metrics_dir)
-    #     test_metrics_df.to_csv(metrics_path, index=False)
+        metrics_path = 'multistage_pipeline/evaluation/test.csv'
+        metrics_dir = os.path.dirname(metrics_path)
+        if not os.path.exists(metrics_dir):
+            os.makedirs(metrics_dir)
+        test_metrics_df.to_csv(metrics_path, index=False)
 
 
     # UD dataset
@@ -257,6 +257,37 @@ def main():
     metrics_df = pd.DataFrame([metrics])
 
     metrics_path = 'multistage_pipeline/evaluation/test_unsafe_diffusion.csv'
+    metrics_dir = os.path.dirname(metrics_path)
+    if not os.path.exists(metrics_dir):
+        os.makedirs(metrics_dir)
+    metrics_df.to_csv(metrics_path, index=False)
+
+
+    # I2P dataset
+
+    print('Processing I2P dataset...')
+    I2P_path = 'I2P_dynamic_threshold_results.json'
+
+    with open(I2P_path, 'r') as file:
+        i2p_data = json.load(file)
+
+    df = pd.DataFrame(i2p_data)
+    df = df[['prompt', 'label', 'score']]
+    df = df.rename(columns={'label': 'target', 'score': 'prediction'})
+
+    llm_classification_cache_path = f'multistage_pipeline/test/I2P.csv'
+    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
+
+    result_path = f'multistage_pipeline/predictions/test/I2P.csv'
+    result_dir = os.path.dirname(result_path)
+    if not os.path.exists(result_dir):
+        os.makedirs(result_dir)
+    result_df.to_csv(result_path, index=False)
+
+    metrics = get_metrics(result_df, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
+    metrics_df = pd.DataFrame([metrics])
+
+    metrics_path = 'multistage_pipeline/evaluation/test_I2P.csv'
     metrics_dir = os.path.dirname(metrics_path)
     if not os.path.exists(metrics_dir):
         os.makedirs(metrics_dir)

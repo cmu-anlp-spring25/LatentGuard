@@ -66,10 +66,11 @@ def compute_accuracy(df, threshold):
     return acc
 
 def get_prediction_llm(prediction_binary, llm_prediction, prediction, delta, threshold=4.47):
-  print('llm_prediction:', llm_prediction)
+#   print('llm_prediction:', llm_prediction)
   if np.isnan(llm_prediction):
     return prediction_binary
-  elif prediction < threshold+delta and prediction > threshold - delta:
+  elif prediction < threshold + delta and prediction > threshold - delta:
+    # within the range of delta from threshold
     return llm_prediction
   else: 
     return prediction_binary
@@ -88,10 +89,12 @@ def get_all_predictions(df, llm_classification_cache_path, threshold = 4.47, del
 #   load data
     if 'prompt' not in df.columns:
         df['prompt'] = df.apply(lambda row: get_prompt(row['target'], row['unsafe_prompt'], row['safe_prompt']), axis=1)
-    df = df[['prompt', 'prediction', 'target']]
+    
+    # Explicitly create an independent copy after slicing
+    df = df[['prompt', 'prediction', 'target']].copy()
 
     # baseline
-    df['prediction_binary'] = df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
+    df.loc[:, 'prediction_binary'] = df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
 
     # prelatent guard
     train_concepts_word_level_blacklist_path = 'multistage_pipeline/train_concepts_word_level_blacklist.json'

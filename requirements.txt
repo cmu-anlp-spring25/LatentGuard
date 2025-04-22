@@ -1,0 +1,12 @@
+# requirements.txt
+pandas
+scikit-learn
+numpy
+litellm
+python-dotenv
+openai
+tqdm
+ftfy
+regex
+transformers
+# Add any other non-torch/clip libraries needed

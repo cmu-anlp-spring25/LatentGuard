@@ -1,5 +1,6 @@
 import pandas as pd
-import sklearn
+# import sklearn
+from sklearn.metrics import roc_auc_score, accuracy_score
 from multistage_pipeline.llms import llm_prompt_classifier, llm_concept_classifier
 import json
 import os
@@ -39,7 +40,7 @@ def compute_auroc(df):
   y_true = df['target']
   y_score = df['prediction']
 
-  auroc = sklearn.metrics.roc_auc_score(y_true, y_score)
+  auroc = roc_auc_score(y_true, y_score)
   auroc = float(auroc)
   return auroc
 
@@ -49,7 +50,7 @@ def compute_accuracy(df, threshold):
 
   y_true = df['target']
   y_pred = df['prediction_binary']
-  acc = sklearn.metrics.accuracy_score(y_true, y_pred)
+  acc = accuracy_score(y_true, y_pred)
   acc = float(acc)
   return acc
 
@@ -125,11 +126,11 @@ def get_metrics(df, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):
     y_true = df['target']
 
     y_pred = df['prediction_pre_latentguard']
-    metrics['acc_pre_latentguard'] = sklearn.metrics.accuracy_score(y_true, y_pred)
+    metrics['acc_pre_latentguard'] = accuracy_score(y_true, y_pred)
 
     for delta in deltas:
        y_pred = df[f'prediction_post_latentguard_delta_{delta}']
-       metrics[f'acc_postlatentguard_delta_{delta}'] = sklearn.metrics.accuracy_score(y_true, y_pred)
+       metrics[f'acc_postlatentguard_delta_{delta}'] = accuracy_score(y_true, y_pred)
     
     return metrics
 

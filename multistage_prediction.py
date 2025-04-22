@@ -44,15 +44,26 @@ def compute_auroc(df):
   auroc = float(auroc)
   return auroc
 
-def compute_accuracy(df, threshold):
-  temp_df = df
-  temp_df['prediction_binary'] = temp_df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
+# def compute_accuracy(df, threshold):
+#   temp_df = df
+#   temp_df['prediction_binary'] = temp_df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
 
-  y_true = df['target']
-  y_pred = df['prediction_binary']
-  acc = accuracy_score(y_true, y_pred)
-  acc = float(acc)
-  return acc
+#   y_true = df['target']
+#   y_pred = df['prediction_binary']
+#   acc = accuracy_score(y_true, y_pred)
+#   acc = float(acc)
+#   return acc
+
+def compute_accuracy(df, threshold):
+    # temp_df = df # No longer need this line
+    # Calculate prediction_binary directly without assigning to a temp column
+    prediction_binary = df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
+
+    y_true = df['target']
+    # y_pred = df['prediction_binary'] # Use the calculated Series directly
+    acc = accuracy_score(y_true, prediction_binary)
+    acc = float(acc)
+    return acc
 
 def get_prediction_llm(prediction_binary, llm_prediction, prediction, delta, threshold=4.47):
   print('llm_prediction:', llm_prediction)
@@ -107,13 +118,24 @@ def get_all_predictions(df, llm_classification_cache_path, threshold = 4.47, del
 
     # override latentguard with llm prediction if the score is within (threshold-delta, threshold+delta)
     for delta in deltas:
-        df[f'prediction_post_latentguard_delta_{delta}'] = df.apply(lambda row: get_prediction_llm(row['prediction_binary'], 
+        # df[f'prediction_post_latentguard_delta_{delta}'] = df.apply(lambda row: get_prediction_llm(row['prediction_binary'], 
+        #                                                                                             row['llm_prediction'],
+        #                                                                                             row['prediction'],
+        #                                                                                             delta = delta,
+        #                                                                                             threshold = threshold
+        #                                                                                             )
+        #                                                                                         , axis=1)
+        
+        # Inside get_all_predictions, around line 110
+        # Original: df[f'prediction_post_latentguard_delta_{delta}'] = df.apply(...)
+        # Corrected:
+        df.loc[:, f'prediction_post_latentguard_delta_{delta}'] = df.apply(lambda row: get_prediction_llm(row['prediction_binary'],
                                                                                                     row['llm_prediction'],
                                                                                                     row['prediction'],
                                                                                                     delta = delta,
                                                                                                     threshold = threshold
-                                                                                                    )
-                                                                                                , axis=1)
+                                                                                                    ), axis=1)
+    # compute accuracy
     return df
     
 def get_metrics(df, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):

@@ -66,14 +66,28 @@ def compute_accuracy(df, threshold):
     return acc
 
 def get_prediction_llm(prediction_binary, llm_prediction, prediction, delta, threshold=4.47):
-#   print('llm_prediction:', llm_prediction)
-  if np.isnan(llm_prediction):
-    return prediction_binary
-  elif prediction < threshold + delta and prediction > threshold - delta:
-    # within the range of delta from threshold
-    return llm_prediction
-  else: 
-    return prediction_binary
+    # Check if the LLM prediction is missing (None)
+    # None indicates LLM was skipped or API failed
+    if llm_prediction is None:
+        return prediction_binary
+    
+    # Check if the original prediction is within the delta range for LLM override
+    elif prediction < threshold + delta and prediction > threshold - delta:
+        # llm_prediction is likely a string here, e.g., "Classification: UNSAFE..."
+        # Parse the string to get the classification
+        # Simple check: assume "UNSAFE" means 1, otherwise 0 (for "SAFE")
+        # More robust parsing could be added if the format varies
+        if isinstance(llm_prediction, str) and "UNSAFE" in llm_prediction:
+             return 1 # Classified as unsafe by LLM
+        elif isinstance(llm_prediction, str) and "SAFE" in llm_prediction:
+             return 0 # Classified as safe by LLM
+        else:
+             # If parsing fails or unexpected format, fallback to original binary
+             # Also handles cases where llm_prediction might be a non-string somehow
+             return prediction_binary
+    else:
+        # Original prediction was outside the delta range, use the original binary prediction
+        return prediction_binary
 
 def get_all_predictions(df, llm_classification_cache_path, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):
     '''

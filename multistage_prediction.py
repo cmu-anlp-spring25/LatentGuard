@@ -1,6 +1,5 @@
 import pandas as pd
-# import sklearn
-from sklearn.metrics import roc_auc_score, accuracy_score
+import sklearn
 from multistage_pipeline.llms import llm_prompt_classifier, llm_concept_classifier
 import json
 import os
@@ -40,54 +39,28 @@ def compute_auroc(df):
   y_true = df['target']
   y_score = df['prediction']
 
-  auroc = roc_auc_score(y_true, y_score)
+  auroc = sklearn.metrics.roc_auc_score(y_true, y_score)
   auroc = float(auroc)
   return auroc
 
-# def compute_accuracy(df, threshold):
-#   temp_df = df
-#   temp_df['prediction_binary'] = temp_df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
-
-#   y_true = df['target']
-#   y_pred = df['prediction_binary']
-#   acc = accuracy_score(y_true, y_pred)
-#   acc = float(acc)
-#   return acc
-
 def compute_accuracy(df, threshold):
-    # temp_df = df # No longer need this line
-    # Calculate prediction_binary directly without assigning to a temp column
-    prediction_binary = df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
+  temp_df = df
+  temp_df['prediction_binary'] = temp_df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
 
-    y_true = df['target']
-    # y_pred = df['prediction_binary'] # Use the calculated Series directly
-    acc = accuracy_score(y_true, prediction_binary)
-    acc = float(acc)
-    return acc
+  y_true = df['target']
+  y_pred = df['prediction_binary']
+  acc = sklearn.metrics.accuracy_score(y_true, y_pred)
+  acc = float(acc)
+  return acc
 
 def get_prediction_llm(prediction_binary, llm_prediction, prediction, delta, threshold=4.47):
-    # Check if the LLM prediction is missing (None)
-    # None indicates LLM was skipped or API failed
-    if llm_prediction is None:
-        return prediction_binary
-    
-    # Check if the original prediction is within the delta range for LLM override
-    elif prediction < threshold + delta and prediction > threshold - delta:
-        # llm_prediction is likely a string here, e.g., "Classification: UNSAFE..."
-        # Parse the string to get the classification
-        # Simple check: assume "UNSAFE" means 1, otherwise 0 (for "SAFE")
-        # More robust parsing could be added if the format varies
-        if isinstance(llm_prediction, str) and "UNSAFE" in llm_prediction:
-             return 1 # Classified as unsafe by LLM
-        elif isinstance(llm_prediction, str) and "SAFE" in llm_prediction:
-             return 0 # Classified as safe by LLM
-        else:
-             # If parsing fails or unexpected format, fallback to original binary
-             # Also handles cases where llm_prediction might be a non-string somehow
-             return prediction_binary
-    else:
-        # Original prediction was outside the delta range, use the original binary prediction
-        return prediction_binary
+  print('llm_prediction:', llm_prediction)
+  if np.isnan(llm_prediction):
+    return prediction_binary
+  elif prediction < threshold+delta and prediction > threshold - delta:
+    return llm_prediction
+  else: 
+    return prediction_binary
 
 def get_all_predictions(df, llm_classification_cache_path, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):
     '''
@@ -103,12 +76,10 @@ def get_all_predictions(df, llm_classification_cache_path, threshold = 4.47, del
 #   load data
     if 'prompt' not in df.columns:
         df['prompt'] = df.apply(lambda row: get_prompt(row['target'], row['unsafe_prompt'], row['safe_prompt']), axis=1)
-    
-    # Explicitly create an independent copy after slicing
-    df = df[['prompt', 'prediction', 'target']].copy()
+    df = df[['prompt', 'prediction', 'target']]
 
     # baseline
-    df.loc[:, 'prediction_binary'] = df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
+    df['prediction_binary'] = df['prediction'].apply(lambda x: 1 if x>= threshold else 0)
 
     # prelatent guard
     train_concepts_word_level_blacklist_path = 'multistage_pipeline/train_concepts_word_level_blacklist.json'
@@ -135,24 +106,13 @@ def get_all_predictions(df, llm_classification_cache_path, threshold = 4.47, del
 
     # override latentguard with llm prediction if the score is within (threshold-delta, threshold+delta)
     for delta in deltas:
-        # df[f'prediction_post_latentguard_delta_{delta}'] = df.apply(lambda row: get_prediction_llm(row['prediction_binary'], 
-        #                                                                                             row['llm_prediction'],
-        #                                                                                             row['prediction'],
-        #                                                                                             delta = delta,
-        #                                                                                             threshold = threshold
-        #                                                                                             )
-        #                                                                                         , axis=1)
-        
-        # Inside get_all_predictions, around line 110
-        # Original: df[f'prediction_post_latentguard_delta_{delta}'] = df.apply(...)
-        # Corrected:
-        df.loc[:, f'prediction_post_latentguard_delta_{delta}'] = df.apply(lambda row: get_prediction_llm(row['prediction_binary'],
+        df[f'prediction_post_latentguard_delta_{delta}'] = df.apply(lambda row: get_prediction_llm(row['prediction_binary'], 
                                                                                                     row['llm_prediction'],
                                                                                                     row['prediction'],
                                                                                                     delta = delta,
                                                                                                     threshold = threshold
-                                                                                                    ), axis=1)
-    # compute accuracy
+                                                                                                    )
+                                                                                                , axis=1)
     return df
     
 def get_metrics(df, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):
@@ -165,11 +125,11 @@ def get_metrics(df, threshold = 4.47, deltas = [0.1, 0.5, 1, 2]):
     y_true = df['target']
 
     y_pred = df['prediction_pre_latentguard']
-    metrics['acc_pre_latentguard'] = accuracy_score(y_true, y_pred)
+    metrics['acc_pre_latentguard'] = sklearn.metrics.accuracy_score(y_true, y_pred)
 
     for delta in deltas:
        y_pred = df[f'prediction_post_latentguard_delta_{delta}']
-       metrics[f'acc_postlatentguard_delta_{delta}'] = accuracy_score(y_true, y_pred)
+       metrics[f'acc_postlatentguard_delta_{delta}'] = sklearn.metrics.accuracy_score(y_true, y_pred)
     
     return metrics
 
@@ -212,14 +172,12 @@ def main():
     }
     # Validation set
     valid_metrics = list()
-    deltas_full = [0.1, 0.5, 1, 2, 3, 4, 5] # Define the full list once
 
     for setting in valid_dfs.keys():
         df = valid_dfs[setting]
         llm_classification_cache_path = f'multistage_pipeline/valid/{setting}.csv'
 
-        # Pass the full deltas list here
-        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, deltas=deltas_full)
+        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
         #    print(result_df)
 
         result_path = f'multistage_pipeline/predictions/valid/{setting}.csv'
@@ -228,8 +186,7 @@ def main():
             os.makedirs(result_dir)
         result_df.to_csv(result_path, index=False)
         
-        # Pass the full deltas list here
-        metrics = get_metrics(result_df, deltas=deltas_full)
+        metrics = get_metrics(result_df)
         metrics['setting'] = setting
         valid_metrics.append(metrics)
 
@@ -250,8 +207,7 @@ def main():
         df = test_dfs[setting]
         llm_classification_cache_path = f'multistage_pipeline/test/{setting}.csv'
 
-        # Pass the full deltas list here
-        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, deltas=deltas_full)
+        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
         #    print(result_df)
 
         result_path = f'multistage_pipeline/predictions/test/{setting}.csv'
@@ -260,8 +216,7 @@ def main():
             os.makedirs(result_dir)
         result_df.to_csv(result_path, index=False)
         
-        # Pass the full deltas list here
-        metrics = get_metrics(result_df, deltas=deltas_full)
+        metrics = get_metrics(result_df)
         metrics['setting'] = setting
         test_metrics.append(metrics)
 
@@ -289,7 +244,7 @@ def main():
     df = df.rename(columns={'label': 'target', 'score': 'prediction'})
 
     llm_classification_cache_path = f'multistage_pipeline/test/unsafe_diffusion.csv'
-    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=deltas_full)
+    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
 
 
     result_path = f'multistage_pipeline/predictions/test/unsafe_diffusion.csv'
@@ -298,7 +253,7 @@ def main():
         os.makedirs(result_dir)
     result_df.to_csv(result_path, index=False)
 
-    metrics = get_metrics(result_df, threshold = 4.47, deltas=deltas_full)
+    metrics = get_metrics(result_df, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
     metrics_df = pd.DataFrame([metrics])
 
     metrics_path = 'multistage_pipeline/evaluation/test_unsafe_diffusion.csv'
@@ -321,7 +276,7 @@ def main():
     df = df.rename(columns={'label': 'target', 'score': 'prediction'})
 
     llm_classification_cache_path = f'multistage_pipeline/test/I2P.csv'
-    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=deltas_full)
+    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
 
     result_path = f'multistage_pipeline/predictions/test/I2P.csv'
     result_dir = os.path.dirname(result_path)
@@ -329,7 +284,7 @@ def main():
         os.makedirs(result_dir)
     result_df.to_csv(result_path, index=False)
 
-    metrics = get_metrics(result_df, threshold = 4.47, deltas=deltas_full)
+    metrics = get_metrics(result_df, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
     metrics_df = pd.DataFrame([metrics])
 
     metrics_path = 'multistage_pipeline/evaluation/test_I2P.csv'

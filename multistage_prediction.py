@@ -212,12 +212,14 @@ def main():
     }
     # Validation set
     valid_metrics = list()
+    deltas_full = [0.1, 0.5, 1, 2, 3, 4, 5] # Define the full list once
 
     for setting in valid_dfs.keys():
         df = valid_dfs[setting]
         llm_classification_cache_path = f'multistage_pipeline/valid/{setting}.csv'
 
-        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
+        # Pass the full deltas list here
+        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, deltas=deltas_full)
         #    print(result_df)
 
         result_path = f'multistage_pipeline/predictions/valid/{setting}.csv'
@@ -226,7 +228,8 @@ def main():
             os.makedirs(result_dir)
         result_df.to_csv(result_path, index=False)
         
-        metrics = get_metrics(result_df)
+        # Pass the full deltas list here
+        metrics = get_metrics(result_df, deltas=deltas_full)
         metrics['setting'] = setting
         valid_metrics.append(metrics)
 
@@ -247,7 +250,8 @@ def main():
         df = test_dfs[setting]
         llm_classification_cache_path = f'multistage_pipeline/test/{setting}.csv'
 
-        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path)
+        # Pass the full deltas list here
+        result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, deltas=deltas_full)
         #    print(result_df)
 
         result_path = f'multistage_pipeline/predictions/test/{setting}.csv'
@@ -256,7 +260,8 @@ def main():
             os.makedirs(result_dir)
         result_df.to_csv(result_path, index=False)
         
-        metrics = get_metrics(result_df)
+        # Pass the full deltas list here
+        metrics = get_metrics(result_df, deltas=deltas_full)
         metrics['setting'] = setting
         test_metrics.append(metrics)
 
@@ -284,7 +289,7 @@ def main():
     df = df.rename(columns={'label': 'target', 'score': 'prediction'})
 
     llm_classification_cache_path = f'multistage_pipeline/test/unsafe_diffusion.csv'
-    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
+    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=deltas_full)
 
 
     result_path = f'multistage_pipeline/predictions/test/unsafe_diffusion.csv'
@@ -293,7 +298,7 @@ def main():
         os.makedirs(result_dir)
     result_df.to_csv(result_path, index=False)
 
-    metrics = get_metrics(result_df, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
+    metrics = get_metrics(result_df, threshold = 4.47, deltas=deltas_full)
     metrics_df = pd.DataFrame([metrics])
 
     metrics_path = 'multistage_pipeline/evaluation/test_unsafe_diffusion.csv'
@@ -316,7 +321,7 @@ def main():
     df = df.rename(columns={'label': 'target', 'score': 'prediction'})
 
     llm_classification_cache_path = f'multistage_pipeline/test/I2P.csv'
-    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
+    result_df = get_all_predictions(df, llm_classification_cache_path=llm_classification_cache_path, threshold = 4.47, deltas=deltas_full)
 
     result_path = f'multistage_pipeline/predictions/test/I2P.csv'
     result_dir = os.path.dirname(result_path)
@@ -324,7 +329,7 @@ def main():
         os.makedirs(result_dir)
     result_df.to_csv(result_path, index=False)
 
-    metrics = get_metrics(result_df, threshold = 4.47, deltas=[0.1, 0.5, 1, 2, 3, 4, 5])
+    metrics = get_metrics(result_df, threshold = 4.47, deltas=deltas_full)
     metrics_df = pd.DataFrame([metrics])
 
     metrics_path = 'multistage_pipeline/evaluation/test_I2P.csv'

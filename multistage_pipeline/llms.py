@@ -34,7 +34,7 @@ def llm_concept_classifier(concept, return_explanation=False):
   response = litellm.completion(
     api_key=LITELLM_API_KEY,
     base_url="https://cmu.litellm.ai",
-    model="openai/gpt-4o",
+    model="openai/gpt-4o-mini",
     messages = messages
   )
 
